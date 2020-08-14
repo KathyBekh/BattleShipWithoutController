@@ -12,134 +12,60 @@ import java.util.*
 модуле в репозитории на GitHub.
  */
 
-class Field @JvmOverloads constructor(val width: Int = 10, val height: Int = 10) {
-    private val ships: MutableMap<Cell, Ship> = HashMap()
-    var turn: Ship = Ship.BLUE
-    private var listener: BoardListener? = null
+import com.git.kathyBeh.battleShips.error.ShipPlacementError
+import com.github.michaelbull.result.Err
+import com.github.michaelbull.result.Ok
+import com.github.michaelbull.result.Result
 
-    fun clear() {
+
+class Field(private val width: Int, private val height: Int) {
+    val ships = mutableListOf<Ship>()
+    private val aliveShips = mutableListOf<Ship>()
+
+    fun addShip(ship: Ship): Result<Unit, ShipPlacementError> {
+        if (!isInsideField(ship)) {
+            return Err(ShipPlacementError.OutsideOfField)
+        }
+        if (!canAddShip(ship)) {
+            return Err(ShipPlacementError.NearAnotherShip)
+        }
+        ships.add(ship)
+        aliveShips.add(ship)
+        return Ok(Unit)
+    }
+
+    //    Метод проверяет что корабль не выходит за пределы игрового поля.
+    private fun isInsideField(ship: Ship): Boolean = ship.doesFitInField(width, height)
+
+    //    Метод проверяет что корабль не касается другого корабля.
+    private fun canAddShip(ship: Ship): Boolean {
+        for (existingShip in ships) {
+            if (!existingShip.canPlaceNear(ship)) {
+                return false
+            }
+        }
+        return true
+    }
+    //Метод возвращает одно из трёх состояний корабля после выстрела: ранен, убит, выстрел прошел мимо.
+    fun takeAShot(shot: Cell): ShotResult {
+        for (ship in aliveShips) {
+            val shotResult = ship.takeAShot(shot)
+            if (shotResult == ShotResult.Kill) {
+                aliveShips.remove(ship)
+                return shotResult
+            }
+            else if (shotResult == ShotResult.Hit) {
+                return shotResult
+            }
+        }
+        return ShotResult.Miss
+    }
+
+    fun noMoreAliveShips() : Boolean = aliveShips.isEmpty()
+
+    fun clearField(field: Field) {
         ships.clear()
-        turn = Ship.BLUE
+        aliveShips.clear()
     }
-
-    fun registerListener(listener: BoardListener) {
-        this.listener = listener
-    }
-
-    operator fun get(x: Int, y: Int): Ship? {
-        return get(Cell(x, y))
-    }
-
-    operator fun get(cell: Cell): Ship? {
-        return ships[cell]
-    }
-
-//    fun getTurn(): Ship {
-//        return turn
-//    }
-
-    fun makeTurn(x: Int): Cell? {
-        return makeTurn(x, true)
-    }
-
-    fun makeTurnNoEvent(x: Int): Cell? {
-        return makeTurn(x, false)
-    }
-
-    private fun makeTurn(x: Int, withEvent: Boolean): Cell? {
-        if (x < 0 || x >= width) return null
-        for (y in 0 until height) {
-            val cell = Cell(x, y)
-            if (!ships.containsKey(cell)) {
-                ships[cell] = turn
-                turn = turn.opposite()
-                if (listener != null && withEvent) {
-                    listener!!.turnMade(cell)
-                }
-                return cell
-            }
-        }
-        return null
-    }
-
-    fun hasFreeCells(): Boolean {
-        for (x in 0 until width) {
-            for (y in 0 until height) {
-                if (get(x, y) == null) return true
-            }
-        }
-        return false
-    }
-
-    fun correct(cell: Cell): Boolean {
-        return cell.x in 0 until width && cell.y >= 0 && cell.y < height
-    }
-
-    fun winner(): Ship? {
-        val combo: WinningCombo = winningCombo() ?: return null
-        return combo.winner
-    }
-
-    fun winningCombo(): WinningCombo? {
-        for (x in 0 until width) {
-            for (y in 0 until height) {
-                val cell = Cell(x, y)
-                val startChip: Ship = ships[cell] ?: continue
-                // Vector-style
-                for (dir in DIRECTIONS) {
-                    var current = cell
-                    var length = 1
-                    while (length < TO_WIN_LENGTH) {
-                        current = current.plus(dir)
-                        if (get(current) !== startChip) break
-                        length++
-                    }
-                    if (length == TO_WIN_LENGTH) return WinningCombo(startChip, cell, current, dir)
-                }
-            }
-        }
-        return null
-
-    }
-
-    override fun toString(): String {
-        val sb = StringBuilder()
-        for (y in height - 1 downTo 0) {
-            for (x in 0 until width) {
-                val ship: Ship? = get(x, y)
-                if (ship == null) {
-                    sb.append("- ")
-                    continue
-                }
-                when (ship) {
-                    Ship.BLUE -> sb.append("B ")
-                    Ship.RED -> sb.append("r ")
-                }
-            }
-            sb.append("\n")
-        }
-        return sb.toString()
-    }
-
-    fun takeTurnBack(x: Int) {
-        for (y in height - 1 downTo 0) {
-            val cell = Cell(x, y)
-            val ship: Ship? = get(cell)
-            if (ship != null) {
-                ships.remove(cell)
-                turn = turn.opposite()
-                return
-            }
-        }
-    }
-
-    companion object {
-        const val TO_WIN_LENGTH = 4
-        private val DIRECTIONS = arrayOf(
-            Cell(0, 1), Cell(1, 0),
-            Cell(1, 1), Cell(1, -1)
-        )
-    }
-
 }
 
