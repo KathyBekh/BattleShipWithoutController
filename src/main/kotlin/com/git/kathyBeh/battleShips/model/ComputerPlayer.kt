@@ -2,8 +2,8 @@ package com.git.kathyBeh.battleShips.model
 
 import java.util.concurrent.ThreadLocalRandom
 
-class AIPlayer : Player {
-    override fun shoot(): Cell {
+class AIPlayer {
+    fun shoot(): Cell {
         return Cell(getCoordinate(), getCoordinate())
     }
 

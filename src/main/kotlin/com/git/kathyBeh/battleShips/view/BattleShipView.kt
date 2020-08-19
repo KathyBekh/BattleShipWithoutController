@@ -9,6 +9,7 @@ import javafx.geometry.Insets
 import javafx.scene.canvas.Canvas
 import javafx.scene.control.Label
 import javafx.scene.image.ImageView
+import javafx.scene.input.MouseButton
 import javafx.scene.layout.Background
 import javafx.scene.layout.BackgroundFill
 import javafx.scene.layout.BorderPane
@@ -28,16 +29,12 @@ class BattleShipView : View() {
     private var statusLabel: Label = label("Print text")
 
     private val shipLengths = listOf(4, 3, 3, 2, 2, 2, 1, 1, 1, 1)
-    private val firstField: Field = generatePlayerField()
-    private val secondField: Field = generateAIField()
-    private val firstPlayer: Player = HumanPlayer()
-    private val secondPlayer: Player = AIPlayer()
+    private val playerField: Field = generatePlayerField()
+    private val computerField: Field = generateAIField()
+    private val bot = AIPlayer()
 
     private lateinit var firstCanvas: Canvas
     private lateinit var secondCanvas: Canvas
-
-    private var clickCoordinate = Cell(10, 10)
-    private var shotResult = ShotResult.Miss
 
     init {
         title = "Battle Ship"
@@ -48,10 +45,39 @@ class BattleShipView : View() {
             )
             left {
                 firstCanvas = drawCanvas()
-                for (sh in firstField.ships) {
-                    drawShip(firstCanvas, sh)
+                var count = 0
+                firstCanvas.setOnMouseClicked {
+                    val x = (it.x / cellWidth).toInt()
+                    val y = (it.y / cellHeight).toInt()
+                    val clicedCoordinates = Cell(x, y)
+                    val dir = if (it.button == MouseButton.SECONDARY) {
+                        Direction.Right
+                    } else {
+                        Direction.Down
+                    }
+
+                    val shipLength = shipLengths[count]
+                    val placement = ShipPlacementDetails(
+                        shipLength, clicedCoordinates, dir
+                    )
+                    val ship = createShip(placement)
+                    playerField.addShip(ship)
+                        .mapBoth(success = {
+                            count += 1
+                            drawShip(firstCanvas, ship)
+                        }, failure = {
+                            when (it) {
+                                ShipPlacementError.OutsideOfField -> warnAboutOutsideOfFieldPlacement(ship)
+                                ShipPlacementError.NearAnotherShip -> warnAboutNearAnotherShipPlacement(ship)
+                            }
+                        })
+                    if (count == 10) {
+                        firstCanvas.setOnMouseClicked { null }
+                    }
                 }
             }
+//
+
             center {
                 toolbar {
 
@@ -59,7 +85,6 @@ class BattleShipView : View() {
                         fitWidth = 100.0
                         fitHeight = 100.0
                     }).action {
-                        startGame()
                         println("You start a new game! Hahahahah")
                     }
                 }
@@ -70,10 +95,14 @@ class BattleShipView : View() {
                 secondCanvas.setOnMouseClicked {
                     val x = (it.x / cellWidth).toInt()
                     val y = (it.y / cellHeight).toInt()
-                    clickCoordinate = Cell(x, y)
+                    val shotCoordinates = Cell(x, y)
 
-                    drawResultingShot(secondField, clickCoordinate, shotResult)
-                    drawResultingShot(firstField, secondPlayer.shoot(), shotResult)
+                    val shotResult = computerField.takeAShot(shotCoordinates)
+                    drawResultingShot(computerField, shotCoordinates, shotResult)
+                    if (shotResult == ShotResult.Miss) {
+                        botShootsUntilMiss()
+                    }
+                    // todo check end game
                 }
             }
             bottom {
@@ -84,29 +113,7 @@ class BattleShipView : View() {
     }
 
     private fun generatePlayerField(): Field {
-        val playerField = Field(10, 10)
-        for (shipLength in shipLengths) {
-            var shipPlaced = false
-            while (!shipPlaced) {
-                val placement = ShipPlacementDetails(
-                    shipLength,
-                    Cell(randomCellCoordinate(), randomCellCoordinate()),
-                    randomDirection()
-                )
-                val ship = createShip(placement)
-                playerField.addShip(ship)
-                    .mapBoth(success = {
-                        shipPlaced = true
-//                        view.drawShip(view.drawCanvas(), ship)
-                    }, failure = {
-                        when (it) {
-                            ShipPlacementError.OutsideOfField -> warnAboutOutsideOfFieldPlacement(ship)
-                            ShipPlacementError.NearAnotherShip -> warnAboutNearAnotherShipPlacement(ship)
-                        }
-                    })
-            }
-        }
-        return playerField
+        return Field(10, 10)
     }
 
 // Метод создает корабль в указанном месте нужного размера.
@@ -152,18 +159,12 @@ class BattleShipView : View() {
         return aiField
     }
 
-    private fun startGame() {
-        while (!secondField.noMoreAliveShips() && !firstField.noMoreAliveShips()) {
-            shootUntilMiss(firstPlayer, secondField)
-            shootUntilMiss(secondPlayer, firstField)
-        }
-    }
-
-    private fun shootUntilMiss(player: Player, enemyField: Field) {
+    private fun botShootsUntilMiss() {
         do {
-            shotResult = enemyField.takeAShot(player.shoot())
-            statusLabel.text = shotResult.toString()
-        } while (!enemyField.noMoreAliveShips() && shotResult != ShotResult.Miss)
+            val shotCoordinates = bot.shoot()
+            val shotResult = playerField.takeAShot(shotCoordinates)
+            drawResultingShot(playerField, shotCoordinates, shotResult)
+        } while (!playerField.noMoreAliveShips() && shotResult != ShotResult.Miss)
     }
 
 
@@ -183,19 +184,15 @@ class BattleShipView : View() {
     }
 
     private fun warnAboutNearAnotherShipPlacement(ship: Ship) {
-        statusLabel.text = "Unable to place ship with coordinates: $ship"
+        println("Unable to place ship with coordinates: $ship")
     }
 
     private fun warnAboutOutsideOfFieldPlacement(ship: Ship) {
-        statusLabel.text = "Ship is outside of field borders! Coordinates: $ship"
-    }
-
-    fun askForShot(): Cell {
-        return clickCoordinate
+        println("Ship is outside of field borders! Coordinates: $ship")
     }
 
     private fun drawResultingShot(field: Field, cell: Cell, shotResult: ShotResult) {
-        val canvas = if (field == firstField) {
+        val canvas = if (field == playerField) {
             firstCanvas
         } else {
             secondCanvas
