@@ -49,7 +49,7 @@ class BattleShipView : View() {
                 firstCanvas.setOnMouseClicked {
                     val x = (it.x / cellWidth).toInt()
                     val y = (it.y / cellHeight).toInt()
-                    val clicedCoordinates = Cell(x, y)
+                    val clickedCoordinates = Cell(x, y)
                     val dir = if (it.button == MouseButton.SECONDARY) {
                         Direction.Right
                     } else {
@@ -58,7 +58,7 @@ class BattleShipView : View() {
 
                     val shipLength = shipLengths[count]
                     val placement = ShipPlacementDetails(
-                        shipLength, clicedCoordinates, dir
+                        shipLength, clickedCoordinates, dir
                     )
                     val ship = createShip(placement)
                     playerField.addShip(ship)
@@ -102,6 +102,15 @@ class BattleShipView : View() {
                     if (shotResult == ShotResult.Miss) {
                         botShootsUntilMiss()
                     }
+
+                    if (computerField.noMoreAliveShips()) {
+                        println("You won! Please press restart.")
+                        secondCanvas.setOnMouseClicked { null }
+                    }
+                    if (playerField.noMoreAliveShips()) {
+                        println("Computer won! ")
+                        secondCanvas.setOnMouseClicked { null }
+                    }
                     // todo check end game
                 }
             }
@@ -113,7 +122,7 @@ class BattleShipView : View() {
     }
 
     private fun generatePlayerField(): Field {
-        return Field(10, 10)
+        return Field(size, size)
     }
 
 // Метод создает корабль в указанном месте нужного размера.
