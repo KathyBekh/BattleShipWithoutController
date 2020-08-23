@@ -63,6 +63,10 @@ class Field(private val width: Int, private val height: Int) {
 
     fun noMoreAliveShips() : Boolean = aliveShips.isEmpty()
 
+    fun howManyShips(): Int {
+        return ships.size
+    }
+
     fun clearField(field: Field) {
         ships.clear()
         aliveShips.clear()

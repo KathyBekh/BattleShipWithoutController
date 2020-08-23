@@ -10,6 +10,7 @@ import javafx.scene.canvas.Canvas
 import javafx.scene.control.Label
 import javafx.scene.image.ImageView
 import javafx.scene.input.MouseButton
+import javafx.scene.input.MouseEvent
 import javafx.scene.layout.Background
 import javafx.scene.layout.BackgroundFill
 import javafx.scene.layout.BorderPane
@@ -29,12 +30,14 @@ class BattleShipView : View() {
     private var statusLabel: Label = label("Print text")
 
     private val shipLengths = listOf(4, 3, 3, 2, 2, 2, 1, 1, 1, 1)
-    private val playerField: Field = generatePlayerField()
-    private val computerField: Field = generateAIField()
+    private var playerField: Field = generatePlayerField()
+    private var computerField: Field = generateAIField()
     private val bot = AIPlayer()
 
     private lateinit var firstCanvas: Canvas
     private lateinit var secondCanvas: Canvas
+
+    var count = 0
 
     init {
         title = "Battle Ship"
@@ -45,79 +48,71 @@ class BattleShipView : View() {
             )
             left {
                 firstCanvas = drawCanvas()
-                var count = 0
-                firstCanvas.setOnMouseClicked {
-                    val x = (it.x / cellWidth).toInt()
-                    val y = (it.y / cellHeight).toInt()
-                    val clickedCoordinates = Cell(x, y)
-                    val dir = if (it.button == MouseButton.SECONDARY) {
-                        Direction.Right
-                    } else {
-                        Direction.Down
-                    }
-
-                    val shipLength = shipLengths[count]
-                    val placement = ShipPlacementDetails(
-                        shipLength, clickedCoordinates, dir
-                    )
-                    val ship = createShip(placement)
-                    playerField.addShip(ship)
-                        .mapBoth(success = {
-                            count += 1
-                            drawShip(firstCanvas, ship)
-                        }, failure = {
-                            when (it) {
-                                ShipPlacementError.OutsideOfField -> warnAboutOutsideOfFieldPlacement(ship)
-                                ShipPlacementError.NearAnotherShip -> warnAboutNearAnotherShipPlacement(ship)
-                            }
-                        })
-                    if (count == 10) {
-                        firstCanvas.setOnMouseClicked { null }
-                    }
-                }
+                placingShipsOnTheField(firstCanvas)
             }
-//
 
             center {
-                toolbar {
-
-                    button(graphic = ImageView("images/shipsWheel1.png").apply {
-                        fitWidth = 100.0
-                        fitHeight = 100.0
+                vbox(16.0) {
+                    button(graphic = ImageView("images/randomButton.png").apply {
+                        fitWidth = 120.0
+                        fitHeight = 50.0
                     }).action {
-                        println("You start a new game! Hahahahah")
+                        left {
+                            firstCanvas = drawCanvas()
+                            playerField = generateAIField()
+                            for (sh in playerField.ships) {
+                                drawShip(firstCanvas, sh)
+                            }
+                        }
+                        right {
+                            secondCanvas = drawCanvas()
+                            startGame(secondCanvas)
+                        }
                     }
+
+                    button(graphic = ImageView("images/helpButton.png").apply {
+                        fitWidth = 120.0
+                        fitHeight = 50.0
+                    }).action {
+                        HelpWindow().openWindow()
+                    }
+
+                    button(graphic = ImageView("images/restartButton.png").apply {
+                        fitWidth = 120.0
+                        fitHeight = 50.0
+                    }).action {
+                        playerField = generatePlayerField()
+                        computerField = generateAIField()
+                        count = 0
+                        left {
+                            firstCanvas = drawCanvas()
+                            placingShipsOnTheField(firstCanvas)
+                        }
+                        right {
+                            secondCanvas = drawCanvas()
+                            startGame(secondCanvas)
+                        }
+                    }
+
+                    button(graphic = ImageView("images/closeButton.png").apply {
+                        fitWidth = 120.0
+                        fitHeight = 50.0
+                    }).action {
+                        close()
+                    }
+                    button(graphic = ImageView("images/vikingShip.png").apply {
+                        fitWidth = 120.0
+                        fitHeight = 100.0
+                    })
                 }
             }
+
             right {
                 secondCanvas = drawCanvas()
 
-                secondCanvas.setOnMouseClicked {
-                    val x = (it.x / cellWidth).toInt()
-                    val y = (it.y / cellHeight).toInt()
-                    val shotCoordinates = Cell(x, y)
-
-                    val shotResult = computerField.takeAShot(shotCoordinates)
-                    drawResultingShot(computerField, shotCoordinates, shotResult)
-                    if (shotResult == ShotResult.Miss) {
-                        botShootsUntilMiss()
-                    }
-
-                    if (computerField.noMoreAliveShips()) {
-                        println("You won! Please press restart.")
-                        secondCanvas.setOnMouseClicked { null }
-                    }
-                    if (playerField.noMoreAliveShips()) {
-                        println("Computer won! ")
-                        secondCanvas.setOnMouseClicked { null }
-                    }
-                    // todo check end game
+                startGame(secondCanvas)
                 }
             }
-            bottom {
-                statusLabel
-            }
-        }
 
     }
 
@@ -200,6 +195,10 @@ class BattleShipView : View() {
         println("Ship is outside of field borders! Coordinates: $ship")
     }
 
+    private fun warnAboutFewShipsPlaced() {
+        println("You need more ships!")
+    }
+
     private fun drawResultingShot(field: Field, cell: Cell, shotResult: ShotResult) {
         val canvas = if (field == playerField) {
             firstCanvas
@@ -228,5 +227,65 @@ class BattleShipView : View() {
         for (c in ship.cells) {
             canvas.graphicsContext2D.fillRect(c.x * cellHeight, c.y * cellHeight, cellWidth, cellHeight)
         }
+    }
+
+    private fun clickedCell(mouseClicked: MouseEvent): Cell {
+        val x = (mouseClicked.x / cellWidth).toInt()
+        val y = (mouseClicked.y / cellHeight).toInt()
+        return Cell(x, y)
+    }
+
+    private fun placingShipsOnTheField(canvas: Canvas) {
+        canvas.setOnMouseClicked {
+            val clickedCoordinates = clickedCell(it)
+            val dir = if (it.button == MouseButton.SECONDARY) {
+                Direction.Right
+            } else {
+                Direction.Down
+            }
+
+            val shipLength = shipLengths[count]
+            val placement = ShipPlacementDetails(
+                shipLength, clickedCoordinates, dir
+            )
+            val ship = createShip(placement)
+            playerField.addShip(ship)
+                .mapBoth(success = {
+                    count += 1
+                    drawShip(firstCanvas, ship)
+                }, failure = {
+                    when (it) {
+                        ShipPlacementError.OutsideOfField -> warnAboutOutsideOfFieldPlacement(ship)
+                        ShipPlacementError.NearAnotherShip -> warnAboutNearAnotherShipPlacement(ship)
+                    }
+                })
+            if (count == 10) {
+                firstCanvas.setOnMouseClicked { }
+            }
+        }
+    }
+
+    private fun startGame(canvas: Canvas) {
+            canvas.setOnMouseClicked {
+                if (playerField.howManyShips() == 10) {
+                    val shotCoordinates = clickedCell(it)
+                    val shotResult = computerField.takeAShot(shotCoordinates)
+                    drawResultingShot(computerField, shotCoordinates, shotResult)
+                    if (shotResult == ShotResult.Miss) {
+                        botShootsUntilMiss()
+                    }
+
+                    if (computerField.noMoreAliveShips()) {
+                        println("You won! Please press restart.")
+                        canvas.setOnMouseClicked { }
+                    }
+                    if (playerField.noMoreAliveShips()) {
+                        println("Computer won! ")
+                        canvas.setOnMouseClicked { }
+                    }
+                } else {
+                    warnAboutFewShipsPlaced()
+                }
+            }
     }
 }
