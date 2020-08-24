@@ -33,7 +33,7 @@ class BattleShipView : View() {
     private lateinit var firstCanvas: Canvas
     private lateinit var secondCanvas: Canvas
 
-    var count = 0
+    private var count = 0
 
     init {
         title = "Battle Ship"
