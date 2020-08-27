@@ -10,4 +10,17 @@ data class Cell(var x: Int, var y: Int) {
     override fun toString(): String {
         return "($x, $y)"
     }
+
+    fun haloCell (): Set<Cell> {
+        val perimeter = mutableSetOf<Cell>()
+        perimeter.add(Cell(x + 1, y + 1))
+        perimeter.add(Cell(x - 1, y - 1))
+        perimeter.add(Cell(x - 1, y + 1))
+        perimeter.add(Cell(x + 1, y - 1))
+        perimeter.add(Cell(x + 1, y))
+        perimeter.add(Cell(x - 1, y))
+        perimeter.add(Cell(x, y - 1))
+        perimeter.add(Cell(x, y + 1))
+        return perimeter
+    }
 }

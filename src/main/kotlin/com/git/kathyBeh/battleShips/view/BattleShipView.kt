@@ -116,9 +116,8 @@ class BattleShipView : View() {
             right {
                 secondCanvas = drawCanvas()
                 startGame(secondCanvas)
-                }
             }
-
+        }
     }
 
     private fun drawCanvas(): Canvas {
@@ -217,30 +216,30 @@ class BattleShipView : View() {
     }
 
     private fun startGame(canvas: Canvas) {
-            canvas.setOnMouseClicked {
-                if (controller.playerField.howManyShips() == 10) {
-                    val shotCoordinates = clickedCell(it)
-                    val shotResult = controller.computerField.takeAShot(shotCoordinates)
-                    drawResultingShot(controller.computerField, shotCoordinates, shotResult)
-                    if (shotResult == ShotResult.Miss) {
-                        controller.botShootsUntilMiss()
-                    }
-
-                    if (controller.computerField.noMoreAliveShips()) {
-                        statusLabel.text = "You won! Please press restart."
-                        statusLabel.textFill = Color.web("#1a237e")
-                        canvas.setOnMouseClicked { }
-                    }
-                    if (controller.playerField.noMoreAliveShips()) {
-                        statusLabel.text = "Computer won! Please press restart."
-                        statusLabel.textFill = Color.web("#1a237e")
-                        canvas.setOnMouseClicked { }
-                    }
-                } else {
-                    statusLabel.text = warnAboutFewShipsPlaced()
-                    statusLabel.textFill = Color.web("RED")
+        canvas.setOnMouseClicked {
+            if (controller.playerField.howManyShips() == 10) {
+                val shotCoordinates = clickedCell(it)
+                val shotResult = controller.computerField.takeAShot(shotCoordinates)
+                drawResultingShot(controller.computerField, shotCoordinates, shotResult)
+                statusLabel.text = "$shotResult"
+                if (shotResult == ShotResult.Miss) {
+                    controller.botShootsUntilMiss()
                 }
-            }
-    }
 
+                if (controller.computerField.noMoreAliveShips()) {
+                    statusLabel.text = "You won! Please press restart."
+                    statusLabel.textFill = Color.web("#1a237e")
+                    canvas.setOnMouseClicked { }
+                }
+                if (controller.playerField.noMoreAliveShips()) {
+                    statusLabel.text = "Computer won! Please press restart."
+                    statusLabel.textFill = Color.web("#1a237e")
+                    canvas.setOnMouseClicked { }
+                }
+            } else {
+                statusLabel.text = warnAboutFewShipsPlaced()
+                statusLabel.textFill = Color.web("RED")
+            }
+        }
+    }
 }

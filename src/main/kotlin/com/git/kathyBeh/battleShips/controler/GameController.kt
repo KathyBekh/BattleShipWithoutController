@@ -6,7 +6,7 @@ import com.github.michaelbull.result.onSuccess
 import tornadofx.Controller
 import kotlin.random.Random
 
-class GameController: Controller() {
+class GameController : Controller() {
     private val view: BattleShipView by inject()
     internal val shipLengths = listOf(4, 3, 3, 2, 2, 2, 1, 1, 1, 1)
     internal var playerField: Field = generatePlayerField()
@@ -18,14 +18,13 @@ class GameController: Controller() {
     }
 
     private fun randomCellCoordinate(): Int =
-        Random.nextInt(10)  // рандомная ячейка нужна для раставления кораблей и  "выстрела" АИ.
+        Random.nextInt(10)  // рандомная ячейка для раставления кораблей и "выстрела" ИИ.
 
     private fun randomDirection(): Direction =
-        if (Random.nextBoolean()) Direction.Down    // рандомное направление нужно для раставления кораблей АИ.
+        if (Random.nextBoolean()) Direction.Down // рандомное направление для раставления кораблей ИИ.
         else Direction.Right
 
-//    Метод генеирует игровое поле АИ и заполняет его кораблями рандомно.
-
+    // Метод генерирует игровое поле ИИ и заполняет его кораблями рандомно.
     internal fun generateAIField(): Field {
         val aiField = Field(10, 10)
         for (shipLength in shipLengths) {
@@ -62,8 +61,13 @@ class GameController: Controller() {
         do {
             val shotCoordinates = bot.shoot()
             val shotResult = playerField.takeAShot(shotCoordinates)
+            if (shotResult == ShotResult.Kill) {
+                val killSh = playerField.killShip(shotCoordinates)
+                if (killSh != null) {
+                    bot.shipHalo(killSh)
+                }
+            }
             view.drawResultingShot(playerField, shotCoordinates, shotResult)
         } while (!playerField.noMoreAliveShips() && shotResult != ShotResult.Miss)
     }
-
 }

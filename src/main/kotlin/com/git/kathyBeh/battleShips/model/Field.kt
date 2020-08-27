@@ -67,9 +67,14 @@ class Field(private val width: Int, private val height: Int) {
         return ships.size
     }
 
-    fun clearField(field: Field) {
-        ships.clear()
-        aliveShips.clear()
+    fun killShip(cell: Cell): Ship? {
+        var sh: Ship? = null
+        for (ship in ships) {
+            if (cell in ship.cells) {
+                sh = ship
+            }
+        }
+        return sh
     }
 }
 

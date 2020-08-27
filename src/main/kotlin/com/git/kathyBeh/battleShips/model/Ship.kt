@@ -1,7 +1,8 @@
 package com.git.kathyBeh.battleShips.model
 
 class Ship(val cells: List<Cell>) {
-    private var aliveCells = cells.toMutableList()
+    private val aliveCells = cells.toMutableList()
+
 
     fun doesFitInField(width: Int, height: Int): Boolean = cells.all {
         it.x < width && it.y < height
@@ -21,6 +22,14 @@ class Ship(val cells: List<Cell>) {
             return if (aliveCells.isEmpty()) ShotResult.Kill else ShotResult.Hit
         }
         return ShotResult.Miss
+    }
+
+    fun haloShip(): Set<Cell> {
+        val haloShip = mutableSetOf<Cell>()
+        for (c in cells){
+            haloShip.addAll(c.haloCell())
+        }
+        return haloShip
     }
 
     override fun toString(): String {
