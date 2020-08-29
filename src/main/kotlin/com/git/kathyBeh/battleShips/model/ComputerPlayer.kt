@@ -5,7 +5,7 @@ import java.util.concurrent.ThreadLocalRandom
 class AIPlayer {
     private val alreadyTakenShots = mutableSetOf<Cell>()
 
-    fun shoot(): Cell {
+    internal fun shoot(): Cell {
         var shot = Cell(getCoordinate(), getCoordinate())
         while (shot in alreadyTakenShots) {
             shot = Cell(getCoordinate(), getCoordinate())
@@ -17,7 +17,7 @@ class AIPlayer {
     private fun getCoordinate(): Int =
         ThreadLocalRandom.current().nextInt(0, 10)
 
-    fun shipHalo (ship: Ship) =
+    internal fun shipHalo (ship: Ship) =
             alreadyTakenShots.addAll(ship.haloShip())
 
 }

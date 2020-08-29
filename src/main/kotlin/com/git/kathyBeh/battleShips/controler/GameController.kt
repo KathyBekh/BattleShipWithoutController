@@ -11,9 +11,9 @@ class GameController : Controller() {
     internal val shipLengths = listOf(4, 3, 3, 2, 2, 2, 1, 1, 1, 1)
     internal var playerField: Field = generatePlayerField()
     internal var computerField: Field = generateAIField()
-    private val bot = AIPlayer()
+    private var bot = AIPlayer()
 
-    internal fun generatePlayerField(): Field {
+    private fun generatePlayerField(): Field {
         return Field(10, 10)
     }
 
@@ -69,5 +69,11 @@ class GameController : Controller() {
             }
             view.drawResultingShot(playerField, shotCoordinates, shotResult)
         } while (!playerField.noMoreAliveShips() && shotResult != ShotResult.Miss)
+    }
+
+    internal fun newPlayers() {
+        playerField = generatePlayerField()
+        computerField = generateAIField()
+        bot = AIPlayer()
     }
 }

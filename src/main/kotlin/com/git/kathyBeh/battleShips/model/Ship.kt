@@ -4,11 +4,11 @@ class Ship(val cells: List<Cell>) {
     private val aliveCells = cells.toMutableList()
 
 
-    fun doesFitInField(width: Int, height: Int): Boolean = cells.all {
+    internal fun doesFitInField(width: Int, height: Int): Boolean = cells.all {
         it.x < width && it.y < height
     }
 
-    fun canPlaceNear(ship: Ship): Boolean = ship.cells.all {
+    internal fun canPlaceNear(ship: Ship): Boolean = ship.cells.all {
         canPlaceNear(it)
     }
 
@@ -16,7 +16,7 @@ class Ship(val cells: List<Cell>) {
         it.canPlaceNear(cell)
     }
 
-    fun takeAShot(coordinates: Cell): ShotResult {
+    internal fun takeAShot(coordinates: Cell): ShotResult {
         if (coordinates in aliveCells) {
             aliveCells.remove(coordinates)
             return if (aliveCells.isEmpty()) ShotResult.Kill else ShotResult.Hit
@@ -24,7 +24,7 @@ class Ship(val cells: List<Cell>) {
         return ShotResult.Miss
     }
 
-    fun haloShip(): Set<Cell> {
+    internal fun haloShip(): Set<Cell> {
         val haloShip = mutableSetOf<Cell>()
         for (c in cells){
             haloShip.addAll(c.haloCell())

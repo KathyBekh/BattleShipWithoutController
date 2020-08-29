@@ -50,7 +50,9 @@ class BattleShipView : View() {
 
             left {
                 firstCanvas = drawCanvas()
-                placingShipsOnTheField(firstCanvas)
+                firstCanvas.setOnMouseClicked {
+                    placingShipsOnTheField(it)
+                }
             }
 
             center {
@@ -68,7 +70,9 @@ class BattleShipView : View() {
                         }
                         right {
                             secondCanvas = drawCanvas()
-                            startGame(secondCanvas)
+                            secondCanvas.setOnMouseClicked {
+                                startGame(it)
+                            }
                         }
                         statusLabel.text = "Let the Game Begin!"
                         statusLabel.textFill = Color.web("#1a237e")
@@ -85,16 +89,19 @@ class BattleShipView : View() {
                         fitWidth = 120.0
                         fitHeight = 50.0
                     }).action {
-                        controller.playerField = controller.generatePlayerField()
-                        controller.computerField = controller.generateAIField()
+                        controller.newPlayers()
                         count = 0
                         left {
                             firstCanvas = drawCanvas()
-                            placingShipsOnTheField(firstCanvas)
+                            firstCanvas.setOnMouseClicked {
+                                placingShipsOnTheField(it)
+                            }
                         }
                         right {
                             secondCanvas = drawCanvas()
-                            startGame(secondCanvas)
+                            secondCanvas.setOnMouseClicked {
+                                startGame(it)
+                            }
                         }
                         statusLabel.text = "You have started a new game!"
                         statusLabel.textFill = Color.web("#1a237e")
@@ -115,7 +122,9 @@ class BattleShipView : View() {
 
             right {
                 secondCanvas = drawCanvas()
-                startGame(secondCanvas)
+                secondCanvas.setOnMouseClicked {
+                    startGame(it)
+                }
             }
         }
     }
@@ -183,10 +192,9 @@ class BattleShipView : View() {
         return Cell(x, y)
     }
 
-    private fun placingShipsOnTheField(canvas: Canvas) {
-        canvas.setOnMouseClicked {
-            val clickedCoordinates = clickedCell(it)
-            val dir = if (it.button == MouseButton.SECONDARY) {
+    private fun placingShipsOnTheField(mouseEvent: MouseEvent) {
+            val clickedCoordinates = clickedCell(mouseEvent)
+            val dir = if (mouseEvent.button == MouseButton.SECONDARY) {
                 Direction.Right
             } else {
                 Direction.Down
@@ -207,18 +215,16 @@ class BattleShipView : View() {
                         ShipPlacementError.NearAnotherShip -> warnAboutNearAnotherShipPlacement(ship)
                         else -> "unknown result!"
                     }
-                    statusLabel.textFill = Color.web("RED")
+                    statusLabel.textFill = Color.RED
                 })
             if (count == 10) {
                 firstCanvas.setOnMouseClicked { }
             }
-        }
     }
 
-    private fun startGame(canvas: Canvas) {
-        canvas.setOnMouseClicked {
+    private fun startGame(mouseEvent: MouseEvent) {
             if (controller.playerField.howManyShips() == 10) {
-                val shotCoordinates = clickedCell(it)
+                val shotCoordinates = clickedCell(mouseEvent)
                 val shotResult = controller.computerField.takeAShot(shotCoordinates)
                 drawResultingShot(controller.computerField, shotCoordinates, shotResult)
                 statusLabel.text = "$shotResult"
@@ -229,17 +235,16 @@ class BattleShipView : View() {
                 if (controller.computerField.noMoreAliveShips()) {
                     statusLabel.text = "You won! Please press restart."
                     statusLabel.textFill = Color.web("#1a237e")
-                    canvas.setOnMouseClicked { }
+                    secondCanvas.setOnMouseClicked { }
                 }
                 if (controller.playerField.noMoreAliveShips()) {
                     statusLabel.text = "Computer won! Please press restart."
                     statusLabel.textFill = Color.web("#1a237e")
-                    canvas.setOnMouseClicked { }
+                    secondCanvas.setOnMouseClicked { }
                 }
             } else {
                 statusLabel.text = warnAboutFewShipsPlaced()
-                statusLabel.textFill = Color.web("RED")
+                statusLabel.textFill = Color.RED
             }
-        }
     }
 }
