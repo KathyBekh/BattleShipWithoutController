@@ -19,9 +19,9 @@ class Ship(val cells: List<Cell>) {
     internal fun takeAShot(coordinates: Cell): ShotResult {
         if (coordinates in aliveCells) {
             aliveCells.remove(coordinates)
-            return if (aliveCells.isEmpty()) ShotResult.Kill else ShotResult.Hit
+            return if (aliveCells.isEmpty()) ShotResult.KILL else ShotResult.HIT
         }
-        return ShotResult.Miss
+        return ShotResult.MISS
     }
 
     internal fun haloShip(): Set<Cell> {

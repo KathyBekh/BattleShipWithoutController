@@ -21,8 +21,8 @@ class GameController : Controller() {
         Random.nextInt(10)  // рандомная ячейка для раставления кораблей и "выстрела" ИИ.
 
     private fun randomDirection(): Direction =
-        if (Random.nextBoolean()) Direction.Down // рандомное направление для раставления кораблей ИИ.
-        else Direction.Right
+        if (Random.nextBoolean()) Direction.DOWN // рандомное направление для раставления кораблей ИИ.
+        else Direction.RIGHT
 
     // Метод генерирует игровое поле ИИ и заполняет его кораблями рандомно.
     internal fun generateAIField(): Field {
@@ -47,28 +47,48 @@ class GameController : Controller() {
 
     internal fun createShip(placement: ShipPlacementDetails): Ship =
         when (placement.direction) {
-            Direction.Right -> {
+            Direction.RIGHT -> {
                 val start = placement.initialCell.x
                 Ship((start until start + placement.length).map { Cell(it, placement.initialCell.y) }.toList())
             }
-            Direction.Down -> {
+            Direction.DOWN -> {
                 val start = placement.initialCell.y
                 Ship((start until start + placement.length).map { Cell(placement.initialCell.x, it) }.toList())
             }
+            Direction.LEFT -> {
+                val start = placement.initialCell.x
+                Ship((start until start - placement.length).map { Cell(it, placement.initialCell.y) }.toList())
+            }
+            Direction.UP -> {
+                val start = placement.initialCell.y
+                Ship((start until start - placement.length).map { Cell(placement.initialCell.x, it) }.toList())
+            }
         }
+
+    private var woundedShip: Cell? = null
 
     internal fun botShootsUntilMiss() {
         do {
-            val shotCoordinates = bot.shoot()
+            val shotCoordinates = if (woundedShip != null) {
+                bot.shootNear(woundedShip!!)
+            }
+            else {
+                bot.shoot()
+            }
             val shotResult = playerField.takeAShot(shotCoordinates)
-            if (shotResult == ShotResult.Kill) {
+            if (shotResult == ShotResult.KILL) {
                 val killSh = playerField.killShip(shotCoordinates)
                 if (killSh != null) {
                     bot.shipHalo(killSh)
+                    woundedShip = null
                 }
             }
+            if (shotResult == ShotResult.HIT) {
+//                val woundedCell = bot.shootNear(shotCoordinates)
+                woundedShip = shotCoordinates
+            }
             view.drawResultingShot(playerField, shotCoordinates, shotResult)
-        } while (!playerField.noMoreAliveShips() && shotResult != ShotResult.Miss)
+        } while (!playerField.noMoreAliveShips() && shotResult != ShotResult.MISS)
     }
 
     internal fun newPlayers() {

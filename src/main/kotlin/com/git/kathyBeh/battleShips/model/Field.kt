@@ -50,15 +50,15 @@ class Field(private val width: Int, private val height: Int) {
     internal fun takeAShot(shot: Cell): ShotResult {
         for (ship in aliveShips) {
             val shotResult = ship.takeAShot(shot)
-            if (shotResult == ShotResult.Kill) {
+            if (shotResult == ShotResult.KILL) {
                 aliveShips.remove(ship)
                 return shotResult
             }
-            else if (shotResult == ShotResult.Hit) {
+            else if (shotResult == ShotResult.HIT) {
                 return shotResult
             }
         }
-        return ShotResult.Miss
+        return ShotResult.MISS
     }
 
     internal fun noMoreAliveShips() : Boolean = aliveShips.isEmpty()

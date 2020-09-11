@@ -19,8 +19,9 @@ import javafx.scene.paint.Color
 import javafx.scene.text.Font
 import tornadofx.*
 
-class BattleShipView : View() {
+open class BattleShipView : View() {
     private val controller: GameController by inject()
+
     private val size = 10
     private val width = 400.0
     private val height = 400.0
@@ -34,6 +35,8 @@ class BattleShipView : View() {
     private lateinit var secondCanvas: Canvas
 
     private var count = 0
+    private val playerAlreadyTakenShots = mutableSetOf<Cell>()
+
 
     init {
         title = "Battle Ship"
@@ -70,9 +73,7 @@ class BattleShipView : View() {
                         }
                         right {
                             secondCanvas = drawCanvas()
-                            secondCanvas.setOnMouseClicked {
-                                startGame(it)
-                            }
+                            playerClick(secondCanvas)
                         }
                         statusLabel.text = "Let the Game Begin!"
                         statusLabel.textFill = Color.web("#1a237e")
@@ -99,9 +100,7 @@ class BattleShipView : View() {
                         }
                         right {
                             secondCanvas = drawCanvas()
-                            secondCanvas.setOnMouseClicked {
-                                startGame(it)
-                            }
+                            playerClick(secondCanvas)
                         }
                         statusLabel.text = "You have started a new game!"
                         statusLabel.textFill = Color.web("#1a237e")
@@ -122,9 +121,7 @@ class BattleShipView : View() {
 
             right {
                 secondCanvas = drawCanvas()
-                secondCanvas.setOnMouseClicked {
-                    startGame(it)
-                }
+                playerClick(secondCanvas)
             }
         }
     }
@@ -144,45 +141,40 @@ class BattleShipView : View() {
         }
     }
 
-    private fun warnAboutNearAnotherShipPlacement(ship: Ship): String {
-        return "Unable to place ship with coordinates: $ship"
-    }
-
-    private fun warnAboutOutsideOfFieldPlacement(ship: Ship): String {
-        return "Ship is outside of field borders! Coordinates: $ship"
-    }
-
-    private fun warnAboutFewShipsPlaced(): String {
-        return "You need more ships!"
-    }
-
-    internal fun drawResultingShot(field: Field, cell: Cell, shotResult: ShotResult) {
-        val canvas = if (field == controller.playerField) {
-            firstCanvas
-        } else {
-            secondCanvas
-        }
-
-        if (shotResult == ShotResult.Miss) {
-            canvas.graphicsContext2D.fill = Color.DARKBLUE
-            canvas.graphicsContext2D.fillOval(
-                cell.x * cellWidth + (cellWidth / 4),
-                cell.y * cellHeight + (cellHeight / 4),
-                cellHeight / 2,
-                cellWidth / 2
-            )
-        } else {
-            canvas.graphicsContext2D.fill = Color.BROWN
-            canvas.graphicsContext2D.fillRect(cell.x * cellWidth, cell.y * cellHeight, cellHeight, cellWidth)
-            canvas.graphicsContext2D.fill = Color.ORANGE
-            canvas.graphicsContext2D.fillOval(cell.x * cellWidth, cell.y * cellHeight, cellHeight, cellWidth)
-        }
-    }
-
     private fun drawShip(canvas: Canvas, ship: Ship) {
         canvas.graphicsContext2D.fill = Color.BROWN
         for (c in ship.cells) {
             canvas.graphicsContext2D.fillRect(c.x * cellHeight, c.y * cellHeight, cellWidth, cellHeight)
+        }
+    }
+
+    private fun placingShipsOnTheField(mouseEvent: MouseEvent) {
+        val clickedCoordinates = clickedCell(mouseEvent)
+        val dir = if (mouseEvent.button == MouseButton.SECONDARY) {
+            Direction.RIGHT
+        } else {
+            Direction.DOWN
+        }
+
+        val shipLength = controller.shipLengths[count]
+        val placement = ShipPlacementDetails(
+            shipLength, clickedCoordinates, dir
+        )
+        val ship = controller.createShip(placement)
+        controller.playerField.addShip(ship)
+            .mapBoth(success = {
+                count += 1
+                drawShip(firstCanvas, ship)
+            }, failure = {
+                statusLabel.text = when (it) {
+                    ShipPlacementError.OutsideOfField -> warnAboutOutsideOfFieldPlacement(ship)
+                    ShipPlacementError.NearAnotherShip -> warnAboutNearAnotherShipPlacement(ship)
+                    else -> "unknown result!"
+                }
+                statusLabel.textFill = Color.RED
+            })
+        if (count == 10) {
+            firstCanvas.setOnMouseClicked { }
         }
     }
 
@@ -192,34 +184,27 @@ class BattleShipView : View() {
         return Cell(x, y)
     }
 
-    private fun placingShipsOnTheField(mouseEvent: MouseEvent) {
-            val clickedCoordinates = clickedCell(mouseEvent)
-            val dir = if (mouseEvent.button == MouseButton.SECONDARY) {
-                Direction.Right
-            } else {
-                Direction.Down
-            }
+    private fun doubleClickCheck(mouseEvent: MouseEvent): Boolean {
+        val clickedCell = clickedCell(mouseEvent)
+        return if (clickedCell in playerAlreadyTakenShots) {
+            statusLabel.text = warnAboutDoubleClicked()
+            statusLabel.textFill = Color.RED
+            secondCanvas.setOnMouseClicked { }
+            false
+        }
+        else true
+    }
 
-            val shipLength = controller.shipLengths[count]
-            val placement = ShipPlacementDetails(
-                shipLength, clickedCoordinates, dir
-            )
-            val ship = controller.createShip(placement)
-            controller.playerField.addShip(ship)
-                .mapBoth(success = {
-                    count += 1
-                    drawShip(firstCanvas, ship)
-                }, failure = {
-                    statusLabel.text = when (it) {
-                        ShipPlacementError.OutsideOfField -> warnAboutOutsideOfFieldPlacement(ship)
-                        ShipPlacementError.NearAnotherShip -> warnAboutNearAnotherShipPlacement(ship)
-                        else -> "unknown result!"
-                    }
-                    statusLabel.textFill = Color.RED
-                })
-            if (count == 10) {
-                firstCanvas.setOnMouseClicked { }
+    private fun playerClick(canvas: Canvas) {
+        canvas.setOnMouseClicked {
+            if(doubleClickCheck(it)) {
+                playerAlreadyTakenShots.add(clickedCell(it))
+                startGame(it)
             }
+            else {
+                playerClick(canvas)
+            }
+        }
     }
 
     private fun startGame(mouseEvent: MouseEvent) {
@@ -228,7 +213,7 @@ class BattleShipView : View() {
                 val shotResult = controller.computerField.takeAShot(shotCoordinates)
                 drawResultingShot(controller.computerField, shotCoordinates, shotResult)
                 statusLabel.text = "$shotResult"
-                if (shotResult == ShotResult.Miss) {
+                if (shotResult == ShotResult.MISS) {
                     controller.botShootsUntilMiss()
                 }
 
@@ -246,5 +231,44 @@ class BattleShipView : View() {
                 statusLabel.text = warnAboutFewShipsPlaced()
                 statusLabel.textFill = Color.RED
             }
+    }
+
+    internal fun drawResultingShot(field: Field, cell: Cell, shotResult: ShotResult) {
+        val canvas = if (field == controller.playerField) {
+            firstCanvas
+        } else {
+            secondCanvas
+        }
+
+        if (shotResult == ShotResult.MISS) {
+            canvas.graphicsContext2D.fill = Color.DARKBLUE
+            canvas.graphicsContext2D.fillOval(
+                cell.x * cellWidth + (cellWidth / 4),
+                cell.y * cellHeight + (cellHeight / 4),
+                cellHeight / 2,
+                cellWidth / 2
+            )
+        } else {
+            canvas.graphicsContext2D.fill = Color.BROWN
+            canvas.graphicsContext2D.fillRect(cell.x * cellWidth, cell.y * cellHeight, cellHeight, cellWidth)
+            canvas.graphicsContext2D.fill = Color.ORANGE
+            canvas.graphicsContext2D.fillOval(cell.x * cellWidth, cell.y * cellHeight, cellHeight, cellWidth)
+        }
+    }
+
+    private fun warnAboutNearAnotherShipPlacement(ship: Ship): String {
+        return "Unable to place ship with coordinates: $ship"
+    }
+
+    private fun warnAboutOutsideOfFieldPlacement(ship: Ship): String {
+        return "Ship is outside of field borders! Coordinates: $ship"
+    }
+
+    private fun warnAboutFewShipsPlaced(): String {
+        return "You need more ships!"
+    }
+
+    private fun warnAboutDoubleClicked(): String {
+        return "This coordinate was already shot at!"
     }
 }
