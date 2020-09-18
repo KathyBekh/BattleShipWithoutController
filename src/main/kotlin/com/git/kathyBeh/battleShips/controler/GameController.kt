@@ -55,17 +55,8 @@ class GameController : Controller() {
                 val start = placement.initialCell.y
                 Ship((start until start + placement.length).map { Cell(placement.initialCell.x, it) }.toList())
             }
-            Direction.LEFT -> {
-                val start = placement.initialCell.x
-                Ship((start until start - placement.length).map { Cell(it, placement.initialCell.y) }.toList())
-            }
-            Direction.UP -> {
-                val start = placement.initialCell.y
-                Ship((start until start - placement.length).map { Cell(placement.initialCell.x, it) }.toList())
-            }
         }
 
-    private var woundedShip: Cell? = null
 
     internal fun botShootsUntilMiss() {
         do {
@@ -75,14 +66,12 @@ class GameController : Controller() {
                 ShotResult.MISS -> {
                 }
                 ShotResult.HIT -> {
-                    woundedShip = shotCoordinates
+                    bot.addWoundedShip(shotCoordinates)
                 }
                 ShotResult.KILL -> {
-                    woundedShip = null
-                    val killSh = playerField.killShip(shotCoordinates)
-                    if (killSh != null) {
-                        bot.shipHalo(killSh)
-                    }
+                    val killSh = bot.killShip(shotCoordinates)
+                    bot.shipHalo(killSh)
+                    bot.removeShipFromWoundedShipAfterKillIt()
                 }
             }
             view.drawResultingShot(playerField, shotCoordinates, shotResult)
@@ -91,10 +80,10 @@ class GameController : Controller() {
 
 
     private fun shootAsBot(): Cell =
-        if (woundedShip == null) {
+        if (bot.noWoundedShip()) {
             bot.shootRandomly()
         } else {
-            bot.shootNear(woundedShip!!)
+            bot.shootNear()
         }
 
     internal fun newPlayers() {

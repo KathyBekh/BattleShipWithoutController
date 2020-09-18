@@ -26,8 +26,8 @@ class Ship(val cells: List<Cell>) {
 
     internal fun haloShip(): Set<Cell> {
         val haloShip = mutableSetOf<Cell>()
-        for (c in cells){
-            haloShip.addAll(c.haloCell())
+        for (cell in cells){
+            haloShip.addAll(cell.haloCell())
         }
         return haloShip
     }

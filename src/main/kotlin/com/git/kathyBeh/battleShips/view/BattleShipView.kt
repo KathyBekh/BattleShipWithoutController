@@ -36,6 +36,7 @@ open class BattleShipView : View() {
 
     private var count = 0
     private val playerAlreadyTakenShots = mutableSetOf<Cell>()
+    private var inProcess = false
 
 
     init {
@@ -70,6 +71,8 @@ open class BattleShipView : View() {
                             for (sh in controller.playerField.ships) {
                                 drawShip(firstCanvas, sh)
                             }
+                            inProcess = true
+                            playerAlreadyTakenShots.clear()
                         }
                         right {
                             secondCanvas = drawCanvas()
@@ -92,6 +95,7 @@ open class BattleShipView : View() {
                     }).action {
                         controller.newPlayers()
                         count = 0
+                        inProcess = false
                         left {
                             firstCanvas = drawCanvas()
                             firstCanvas.setOnMouseClicked {
@@ -104,6 +108,7 @@ open class BattleShipView : View() {
                         }
                         statusLabel.text = "You have started a new game!"
                         statusLabel.textFill = Color.web("#1a237e")
+                        playerAlreadyTakenShots.clear()
                     }
 
                     button(graphic = ImageView("images/closeButton.png").apply {
@@ -169,11 +174,11 @@ open class BattleShipView : View() {
                 statusLabel.text = when (it) {
                     ShipPlacementError.OutsideOfField -> warnAboutOutsideOfFieldPlacement(ship)
                     ShipPlacementError.NearAnotherShip -> warnAboutNearAnotherShipPlacement(ship)
-                    else -> "unknown result!"
                 }
                 statusLabel.textFill = Color.RED
             })
         if (count == 10) {
+            inProcess = true
             firstCanvas.setOnMouseClicked { }
         }
     }
@@ -205,7 +210,7 @@ open class BattleShipView : View() {
     }
 
     private fun startGame(mouseEvent: MouseEvent) {
-        if (controller.playerField.howManyShips() == 10) {
+        if (inProcess) {
             val shotCoordinates = clickedCell(mouseEvent)
             val shotResult = controller.computerField.takeAShot(shotCoordinates)
             drawResultingShot(controller.computerField, shotCoordinates, shotResult)

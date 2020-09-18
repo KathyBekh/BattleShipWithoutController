@@ -20,7 +20,6 @@ import com.github.michaelbull.result.Result
 
 class Field(private val width: Int, private val height: Int) {
     internal val ships = mutableListOf<Ship>()
-    private val aliveShips = mutableListOf<Ship>()
 
     internal fun addShip(ship: Ship): Result<Unit, ShipPlacementError> {
         if (!isInsideField(ship)) {
@@ -30,7 +29,6 @@ class Field(private val width: Int, private val height: Int) {
             return Err(ShipPlacementError.NearAnotherShip)
         }
         ships.add(ship)
-        aliveShips.add(ship)
         return Ok(Unit)
     }
 
@@ -48,10 +46,10 @@ class Field(private val width: Int, private val height: Int) {
     }
     //Метод возвращает одно из трёх состояний корабля после выстрела: ранен, убит, выстрел прошел мимо.
     internal fun takeAShot(shot: Cell): ShotResult {
-        for (ship in aliveShips) {
+        for (ship in ships) {
             val shotResult = ship.takeAShot(shot)
             if (shotResult == ShotResult.KILL) {
-                aliveShips.remove(ship)
+                ships.remove(ship)
                 return shotResult
             }
             else if (shotResult == ShotResult.HIT) {
@@ -61,20 +59,11 @@ class Field(private val width: Int, private val height: Int) {
         return ShotResult.MISS
     }
 
-    internal fun noMoreAliveShips() : Boolean = aliveShips.isEmpty()
+    internal fun noMoreAliveShips() : Boolean = ships.isEmpty()
 
     internal fun howManyShips(): Int {
         return ships.size
     }
 
-    internal fun killShip(cell: Cell): Ship? {
-        var sh: Ship? = null
-        for (ship in ships) {
-            if (cell in ship.cells) {
-                sh = ship
-            }
-        }
-        return sh
-    }
 }
 

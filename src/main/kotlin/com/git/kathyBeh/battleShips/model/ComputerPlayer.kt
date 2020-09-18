@@ -1,60 +1,122 @@
 package com.git.kathyBeh.battleShips.model
 
-import java.util.concurrent.ThreadLocalRandom
+import kotlin.random.Random
 
 class AIPlayer {
-    private val alreadyTakenShots = mutableSetOf<Cell>()
-    private var shipDirection = Direction.RIGHT
+    private val possibleShots = addPossibleShots().toMutableSet()
+    private var woundedShip = mutableListOf<Cell>()
 
-    internal fun shootRandomly(): Cell {
-        var shot = Cell(getCoordinate(), getCoordinate())
-        while (shot in alreadyTakenShots) {
-            shot = Cell(getCoordinate(), getCoordinate())
+    internal fun shootNear(): Cell {
+        var shot: Cell
+        if (woundedShip.size == 1) {
+            shot = nextRandomCellFromNearest()
+        } else {
+            var n = 0
+            do {
+                shot = choose(woundedShip[n])
+                n += 1
+            } while (shot !in possibleShots)
         }
-        alreadyTakenShots.add(shot)
+
+        possibleShots.remove(shot)
         return shot
     }
 
-    internal fun shootNear(cell: Cell): Cell {
-        val shiftedCoordinate: Cell
-        when (shipDirection) {
-            Direction.RIGHT -> {
-                shiftedCoordinate = Cell(cell.x + 1, cell.y)
-                if (shiftedCoordinate in alreadyTakenShots || shiftedCoordinate.x > 9) {
-                    shipDirection = Direction.DOWN
-                    shootNear(cell)
-                }
-            }
-            Direction.DOWN -> {
-                shiftedCoordinate = Cell(cell.x, cell.y + 1)
-                if (shiftedCoordinate in alreadyTakenShots || shiftedCoordinate.y > 9) {
-                    shipDirection = Direction.LEFT
-                    shootNear(cell)
-                }
-            }
-            Direction.LEFT -> {
-                shiftedCoordinate = Cell(cell.x - 1, cell.y)
-                if (shiftedCoordinate in alreadyTakenShots || shiftedCoordinate.x < 0) {
-                    shipDirection = Direction.UP
-                    shootNear(cell)
-                }
-            }
-            Direction.UP -> {
-                shiftedCoordinate = Cell(cell.x, cell.y - 1)
-                if (shiftedCoordinate in alreadyTakenShots || shiftedCoordinate.y < 0) {
-                    shipDirection = Direction.RIGHT
-                    shootNear(cell)
-                }
-            }
+    internal fun shootRandomly(): Cell {
+        var shot = Cell(getCoordinate(), getCoordinate())
+        while (shot !in possibleShots) {
+            shot = Cell(getCoordinate(), getCoordinate())
         }
-        alreadyTakenShots.add(shiftedCoordinate)
-        return shiftedCoordinate
+        possibleShots.remove(shot)
+        return shot
     }
 
     private fun getCoordinate(): Int =
-        ThreadLocalRandom.current().nextInt(0, 10)
+        Random.nextInt(10)
 
     internal fun shipHalo (ship: Ship) =
-            alreadyTakenShots.addAll(ship.haloShip())
+            possibleShots.removeAll(ship.haloShip())
+
+    private fun addPossibleShots(): Set<Cell> {
+        val possiblyShots = mutableSetOf<Cell>()
+        for (x in 0 until 10) {
+            for (y in 0 until 10) {
+                possiblyShots.add(Cell(x, y))
+            }
+        }
+        return possiblyShots
+    }
+
+    internal fun addWoundedShip(cell: Cell) {
+        woundedShip.add(cell)
+    }
+
+    internal fun killShip(cell: Cell): Ship {
+        return if (woundedShip.isEmpty()) {
+            Ship(listOf(cell))
+        } else {
+            woundedShip.add(cell)
+            Ship(woundedShip)
+        }
+    }
+
+    internal fun removeShipFromWoundedShipAfterKillIt() {
+        woundedShip.clear()
+    }
+
+    internal fun noWoundedShip(): Boolean {
+        return woundedShip.isEmpty()
+    }
+
+    // Метод случайным образом выбирает 1 из 4 клеток, вокруг раненой пвлубы корабля.
+    private fun randomCellFromTheNearest(cell: Cell): Cell {
+        return when (Random.nextInt(4)) {
+            0 -> Cell(cell.x + 1, cell.y)
+            1 -> Cell(cell.x - 1, cell.y)
+            2 -> Cell(cell.x, cell.y + 1)
+            else -> Cell(cell.x, cell.y - 1)
+        }
+    }
+
+    // Метод вызывает метод randomCellFromTheNearest до тех пор пока не найдётся
+    // клетка(рядом с раненой "палубой" корабля) в которую ещё не стреляли.
+    private fun nextRandomCellFromNearest(): Cell {
+        var shot = randomCellFromTheNearest(woundedShip[0])
+        while (shot !in possibleShots) {
+            shot = randomCellFromTheNearest(woundedShip[0])
+        }
+        return shot
+    }
+
+    private fun shootY(cell: Cell): Cell {
+        var shot = (Cell(cell.x, cell.y + 1))
+        if (shot !in possibleShots) {
+            shot = (Cell(cell.x, cell.y - 1))
+        }
+        return shot
+    }
+
+    private fun shootX(cell: Cell): Cell {
+        var shot = (Cell(cell.x + 1, cell.y))
+            if (shot !in possibleShots) {
+                shot = (Cell(cell.x - 1, cell.y))
+            }
+        return shot
+    }
+
+    private fun directionWoundedShip(): Direction {
+        return if (woundedShip[0].x == woundedShip[1].x) {
+                Direction.DOWN
+            } else { Direction.RIGHT }
+    }
+
+    private fun choose(cell: Cell): Cell {
+        return if (directionWoundedShip() == Direction.RIGHT) {
+            shootX(cell)
+        }
+        else {
+            shootY(cell)
+        }
+    }
 
 }
