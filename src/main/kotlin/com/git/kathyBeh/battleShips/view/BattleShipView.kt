@@ -19,7 +19,7 @@ import javafx.scene.paint.Color
 import javafx.scene.text.Font
 import tornadofx.*
 
-open class BattleShipView : View() {
+class BattleShipView : View() {
     private val controller: GameController by inject()
 
     private val size = 10
