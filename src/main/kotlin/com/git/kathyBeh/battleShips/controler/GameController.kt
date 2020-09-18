@@ -69,27 +69,33 @@ class GameController : Controller() {
 
     internal fun botShootsUntilMiss() {
         do {
-            val shotCoordinates = if (woundedShip != null) {
-                bot.shootNear(woundedShip!!)
-            }
-            else {
-                bot.shoot()
-            }
+            val shotCoordinates = shootAsBot()
             val shotResult = playerField.takeAShot(shotCoordinates)
-            if (shotResult == ShotResult.KILL) {
-                val killSh = playerField.killShip(shotCoordinates)
-                if (killSh != null) {
-                    bot.shipHalo(killSh)
-                    woundedShip = null
+            when (shotResult) {
+                ShotResult.MISS -> {
                 }
-            }
-            if (shotResult == ShotResult.HIT) {
-//                val woundedCell = bot.shootNear(shotCoordinates)
-                woundedShip = shotCoordinates
+                ShotResult.HIT -> {
+                    woundedShip = shotCoordinates
+                }
+                ShotResult.KILL -> {
+                    woundedShip = null
+                    val killSh = playerField.killShip(shotCoordinates)
+                    if (killSh != null) {
+                        bot.shipHalo(killSh)
+                    }
+                }
             }
             view.drawResultingShot(playerField, shotCoordinates, shotResult)
         } while (!playerField.noMoreAliveShips() && shotResult != ShotResult.MISS)
     }
+
+
+    private fun shootAsBot(): Cell =
+        if (woundedShip == null) {
+            bot.shootRandomly()
+        } else {
+            bot.shootNear(woundedShip!!)
+        }
 
     internal fun newPlayers() {
         playerField = generatePlayerField()

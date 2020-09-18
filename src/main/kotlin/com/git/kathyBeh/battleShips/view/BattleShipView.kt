@@ -184,53 +184,50 @@ open class BattleShipView : View() {
         return Cell(x, y)
     }
 
-    private fun doubleClickCheck(mouseEvent: MouseEvent): Boolean {
+    private fun clickedFirstTime(mouseEvent: MouseEvent): Boolean {
         val clickedCell = clickedCell(mouseEvent)
         return if (clickedCell in playerAlreadyTakenShots) {
             statusLabel.text = warnAboutDoubleClicked()
             statusLabel.textFill = Color.RED
-            secondCanvas.setOnMouseClicked { }
             false
+        } else {
+            true
         }
-        else true
     }
 
     private fun playerClick(canvas: Canvas) {
         canvas.setOnMouseClicked {
-            if(doubleClickCheck(it)) {
+            if (clickedFirstTime(it)) {
                 playerAlreadyTakenShots.add(clickedCell(it))
                 startGame(it)
-            }
-            else {
-                playerClick(canvas)
             }
         }
     }
 
     private fun startGame(mouseEvent: MouseEvent) {
-            if (controller.playerField.howManyShips() == 10) {
-                val shotCoordinates = clickedCell(mouseEvent)
-                val shotResult = controller.computerField.takeAShot(shotCoordinates)
-                drawResultingShot(controller.computerField, shotCoordinates, shotResult)
-                statusLabel.text = "$shotResult"
-                if (shotResult == ShotResult.MISS) {
-                    controller.botShootsUntilMiss()
-                }
-
-                if (controller.computerField.noMoreAliveShips()) {
-                    statusLabel.text = "You won! Please press restart."
-                    statusLabel.textFill = Color.web("#1a237e")
-                    secondCanvas.setOnMouseClicked { }
-                }
-                if (controller.playerField.noMoreAliveShips()) {
-                    statusLabel.text = "Computer won! Please press restart."
-                    statusLabel.textFill = Color.web("#1a237e")
-                    secondCanvas.setOnMouseClicked { }
-                }
-            } else {
-                statusLabel.text = warnAboutFewShipsPlaced()
-                statusLabel.textFill = Color.RED
+        if (controller.playerField.howManyShips() == 10) {
+            val shotCoordinates = clickedCell(mouseEvent)
+            val shotResult = controller.computerField.takeAShot(shotCoordinates)
+            drawResultingShot(controller.computerField, shotCoordinates, shotResult)
+            statusLabel.text = "$shotResult"
+            if (shotResult == ShotResult.MISS) {
+                controller.botShootsUntilMiss()
             }
+
+            if (controller.computerField.noMoreAliveShips()) {
+                statusLabel.text = "You won! Please press restart."
+                statusLabel.textFill = Color.web("#1a237e")
+                secondCanvas.setOnMouseClicked { }
+            }
+            if (controller.playerField.noMoreAliveShips()) {
+                statusLabel.text = "Computer won! Please press restart."
+                statusLabel.textFill = Color.web("#1a237e")
+                secondCanvas.setOnMouseClicked { }
+            }
+        } else {
+            statusLabel.text = warnAboutFewShipsPlaced()
+            statusLabel.textFill = Color.RED
+        }
     }
 
     internal fun drawResultingShot(field: Field, cell: Cell, shotResult: ShotResult) {
